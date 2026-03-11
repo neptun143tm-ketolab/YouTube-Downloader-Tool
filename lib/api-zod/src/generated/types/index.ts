@@ -6,4 +6,14 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./downloadJobResponse";
+export * from "./downloadJobResponseStatus";
+export * from "./downloadRequest";
+export * from "./downloadRequestAudioQuality";
+export * from "./downloadRequestMode";
+export * from "./downloadRequestVideoQuality";
+export * from "./errorResponse";
 export * from "./healthStatus";
+export * from "./successResponse";
+export * from "./videoInfoRequest";
+export * from "./videoInfoResponse";

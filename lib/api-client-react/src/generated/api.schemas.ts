@@ -8,3 +8,79 @@
 export interface HealthStatus {
   status: string;
 }
+
+export interface ErrorResponse {
+  error: string;
+}
+
+export interface SuccessResponse {
+  success: boolean;
+  message?: string;
+}
+
+export interface VideoInfoRequest {
+  url: string;
+}
+
+export interface VideoInfoResponse {
+  title: string;
+  thumbnail?: string;
+  duration?: number;
+  channel?: string;
+}
+
+export type DownloadRequestMode =
+  (typeof DownloadRequestMode)[keyof typeof DownloadRequestMode];
+
+export const DownloadRequestMode = {
+  video: "video",
+  audio: "audio",
+} as const;
+
+export type DownloadRequestVideoQuality =
+  (typeof DownloadRequestVideoQuality)[keyof typeof DownloadRequestVideoQuality];
+
+export const DownloadRequestVideoQuality = {
+  "720p": "720p",
+  "1080p": "1080p",
+  best: "best",
+} as const;
+
+export type DownloadRequestAudioQuality =
+  (typeof DownloadRequestAudioQuality)[keyof typeof DownloadRequestAudioQuality];
+
+export const DownloadRequestAudioQuality = {
+  "128k": "128k",
+  "192k": "192k",
+  "256k": "256k",
+  "320k": "320k",
+} as const;
+
+export interface DownloadRequest {
+  url: string;
+  mode: DownloadRequestMode;
+  videoQuality?: DownloadRequestVideoQuality;
+  audioQuality?: DownloadRequestAudioQuality;
+}
+
+export type DownloadJobResponseStatus =
+  (typeof DownloadJobResponseStatus)[keyof typeof DownloadJobResponseStatus];
+
+export const DownloadJobResponseStatus = {
+  pending: "pending",
+  downloading: "downloading",
+  converting: "converting",
+  done: "done",
+  error: "error",
+} as const;
+
+export interface DownloadJobResponse {
+  jobId: string;
+  status: DownloadJobResponseStatus;
+  progress?: number;
+  filename?: string;
+  filesize?: number;
+  error?: string;
+  title?: string;
+  mode?: string;
+}

@@ -5,18 +5,29 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
+  MutationFunction,
   QueryFunction,
   QueryKey,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
 
-import type { HealthStatus } from "./api.schemas";
+import type {
+  DownloadJobResponse,
+  DownloadRequest,
+  ErrorResponse,
+  HealthStatus,
+  SuccessResponse,
+  VideoInfoRequest,
+  VideoInfoResponse,
+} from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
-import type { ErrorType } from "../custom-fetch";
+import type { ErrorType, BodyType } from "../custom-fetch";
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
@@ -99,3 +110,436 @@ export function useHealthCheck<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * Fetches title and available formats from a YouTube URL
+ * @summary Get video info
+ */
+export const getGetVideoInfoUrl = () => {
+  return `/api/download/info`;
+};
+
+export const getVideoInfo = async (
+  videoInfoRequest: VideoInfoRequest,
+  options?: RequestInit,
+): Promise<VideoInfoResponse> => {
+  return customFetch<VideoInfoResponse>(getGetVideoInfoUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(videoInfoRequest),
+  });
+};
+
+export const getGetVideoInfoMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof getVideoInfo>>,
+    TError,
+    { data: BodyType<VideoInfoRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof getVideoInfo>>,
+  TError,
+  { data: BodyType<VideoInfoRequest> },
+  TContext
+> => {
+  const mutationKey = ["getVideoInfo"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof getVideoInfo>>,
+    { data: BodyType<VideoInfoRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return getVideoInfo(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GetVideoInfoMutationResult = NonNullable<
+  Awaited<ReturnType<typeof getVideoInfo>>
+>;
+export type GetVideoInfoMutationBody = BodyType<VideoInfoRequest>;
+export type GetVideoInfoMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get video info
+ */
+export const useGetVideoInfo = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof getVideoInfo>>,
+    TError,
+    { data: BodyType<VideoInfoRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof getVideoInfo>>,
+  TError,
+  { data: BodyType<VideoInfoRequest> },
+  TContext
+> => {
+  return useMutation(getGetVideoInfoMutationOptions(options));
+};
+
+/**
+ * Starts downloading and converting a YouTube video
+ * @summary Start a download job
+ */
+export const getStartDownloadUrl = () => {
+  return `/api/download/start`;
+};
+
+export const startDownload = async (
+  downloadRequest: DownloadRequest,
+  options?: RequestInit,
+): Promise<DownloadJobResponse> => {
+  return customFetch<DownloadJobResponse>(getStartDownloadUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(downloadRequest),
+  });
+};
+
+export const getStartDownloadMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof startDownload>>,
+    TError,
+    { data: BodyType<DownloadRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof startDownload>>,
+  TError,
+  { data: BodyType<DownloadRequest> },
+  TContext
+> => {
+  const mutationKey = ["startDownload"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof startDownload>>,
+    { data: BodyType<DownloadRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return startDownload(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type StartDownloadMutationResult = NonNullable<
+  Awaited<ReturnType<typeof startDownload>>
+>;
+export type StartDownloadMutationBody = BodyType<DownloadRequest>;
+export type StartDownloadMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Start a download job
+ */
+export const useStartDownload = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof startDownload>>,
+    TError,
+    { data: BodyType<DownloadRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof startDownload>>,
+  TError,
+  { data: BodyType<DownloadRequest> },
+  TContext
+> => {
+  return useMutation(getStartDownloadMutationOptions(options));
+};
+
+/**
+ * @summary Get download job status
+ */
+export const getGetDownloadStatusUrl = (jobId: string) => {
+  return `/api/download/status/${jobId}`;
+};
+
+export const getDownloadStatus = async (
+  jobId: string,
+  options?: RequestInit,
+): Promise<DownloadJobResponse> => {
+  return customFetch<DownloadJobResponse>(getGetDownloadStatusUrl(jobId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetDownloadStatusQueryKey = (jobId: string) => {
+  return [`/api/download/status/${jobId}`] as const;
+};
+
+export const getGetDownloadStatusQueryOptions = <
+  TData = Awaited<ReturnType<typeof getDownloadStatus>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  jobId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getDownloadStatus>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetDownloadStatusQueryKey(jobId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getDownloadStatus>>
+  > = ({ signal }) => getDownloadStatus(jobId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!jobId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getDownloadStatus>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetDownloadStatusQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getDownloadStatus>>
+>;
+export type GetDownloadStatusQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get download job status
+ */
+
+export function useGetDownloadStatus<
+  TData = Awaited<ReturnType<typeof getDownloadStatus>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  jobId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getDownloadStatus>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetDownloadStatusQueryOptions(jobId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Download the completed file
+ */
+export const getDownloadFileUrl = (jobId: string) => {
+  return `/api/download/file/${jobId}`;
+};
+
+export const downloadFile = async (
+  jobId: string,
+  options?: RequestInit,
+): Promise<Blob> => {
+  return customFetch<Blob>(getDownloadFileUrl(jobId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getDownloadFileQueryKey = (jobId: string) => {
+  return [`/api/download/file/${jobId}`] as const;
+};
+
+export const getDownloadFileQueryOptions = <
+  TData = Awaited<ReturnType<typeof downloadFile>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  jobId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof downloadFile>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getDownloadFileQueryKey(jobId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadFile>>> = ({
+    signal,
+  }) => downloadFile(jobId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!jobId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof downloadFile>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type DownloadFileQueryResult = NonNullable<
+  Awaited<ReturnType<typeof downloadFile>>
+>;
+export type DownloadFileQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Download the completed file
+ */
+
+export function useDownloadFile<
+  TData = Awaited<ReturnType<typeof downloadFile>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  jobId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof downloadFile>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getDownloadFileQueryOptions(jobId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Delete a download job and its file
+ */
+export const getDeleteDownloadJobUrl = (jobId: string) => {
+  return `/api/download/delete/${jobId}`;
+};
+
+export const deleteDownloadJob = async (
+  jobId: string,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getDeleteDownloadJobUrl(jobId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteDownloadJobMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteDownloadJob>>,
+    TError,
+    { jobId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteDownloadJob>>,
+  TError,
+  { jobId: string },
+  TContext
+> => {
+  const mutationKey = ["deleteDownloadJob"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteDownloadJob>>,
+    { jobId: string }
+  > = (props) => {
+    const { jobId } = props ?? {};
+
+    return deleteDownloadJob(jobId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteDownloadJobMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteDownloadJob>>
+>;
+
+export type DeleteDownloadJobMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Delete a download job and its file
+ */
+export const useDeleteDownloadJob = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteDownloadJob>>,
+    TError,
+    { jobId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteDownloadJob>>,
+  TError,
+  { jobId: string },
+  TContext
+> => {
+  return useMutation(getDeleteDownloadJobMutationOptions(options));
+};

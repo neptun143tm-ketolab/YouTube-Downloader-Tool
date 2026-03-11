@@ -1,6 +1,5 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
   description: API specification
@@ -10,6 +9,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: download
+    description: YouTube download operations
 paths:
   /healthz:
     get:
@@ -24,6 +25,129 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /download/info:
+    post:
+      operationId: getVideoInfo
+      tags: [download]
+      summary: Get video info
+      description: Fetches title and available formats from a YouTube URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VideoInfoRequest"
+      responses:
+        "200":
+          description: Video info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoInfoResponse"
+        "400":
+          description: Invalid URL or error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /download/start:
+    post:
+      operationId: startDownload
+      tags: [download]
+      summary: Start a download job
+      description: Starts downloading and converting a YouTube video
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DownloadRequest"
+      responses:
+        "200":
+          description: Download job started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DownloadJobResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /download/status/{jobId}:
+    get:
+      operationId: getDownloadStatus
+      tags: [download]
+      summary: Get download job status
+      parameters:
+        - in: path
+          name: jobId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Job status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DownloadJobResponse"
+        "404":
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /download/file/{jobId}:
+    get:
+      operationId: downloadFile
+      tags: [download]
+      summary: Download the completed file
+      parameters:
+        - in: path
+          name: jobId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: File download
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: File not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /download/delete/{jobId}:
+    delete:
+      operationId: deleteDownloadJob
+      tags: [download]
+      summary: Delete a download job and its file
+      parameters:
+        - in: path
+          name: jobId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +157,79 @@ components:
           type: string
       required:
         - status
-
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required:
+        - success
+    VideoInfoRequest:
+      type: object
+      properties:
+        url:
+          type: string
+      required:
+        - url
+    VideoInfoResponse:
+      type: object
+      properties:
+        title:
+          type: string
+        thumbnail:
+          type: string
+        duration:
+          type: number
+        channel:
+          type: string
+      required:
+        - title
+    DownloadRequest:
+      type: object
+      properties:
+        url:
+          type: string
+        mode:
+          type: string
+          enum: [video, audio]
+        videoQuality:
+          type: string
+          enum: ["720p", "1080p", "best"]
+        audioQuality:
+          type: string
+          enum: ["128k", "192k", "256k", "320k"]
+      required:
+        - url
+        - mode
+    DownloadJobResponse:
+      type: object
+      properties:
+        jobId:
+          type: string
+        status:
+          type: string
+          enum: [pending, downloading, converting, done, error]
+        progress:
+          type: number
+        filename:
+          type: string
+        filesize:
+          type: number
+        error:
+          type: string
+        title:
+          type: string
+        mode:
+          type: string
+      required:
+        - jobId
+        - status

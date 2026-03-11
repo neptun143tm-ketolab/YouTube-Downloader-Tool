@@ -14,3 +14,77 @@ import * as zod from "zod";
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
 });
+
+/**
+ * Fetches title and available formats from a YouTube URL
+ * @summary Get video info
+ */
+export const GetVideoInfoBody = zod.object({
+  url: zod.string(),
+});
+
+export const GetVideoInfoResponse = zod.object({
+  title: zod.string(),
+  thumbnail: zod.string().optional(),
+  duration: zod.number().optional(),
+  channel: zod.string().optional(),
+});
+
+/**
+ * Starts downloading and converting a YouTube video
+ * @summary Start a download job
+ */
+export const StartDownloadBody = zod.object({
+  url: zod.string(),
+  mode: zod.enum(["video", "audio"]),
+  videoQuality: zod.enum(["720p", "1080p", "best"]).optional(),
+  audioQuality: zod.enum(["128k", "192k", "256k", "320k"]).optional(),
+});
+
+export const StartDownloadResponse = zod.object({
+  jobId: zod.string(),
+  status: zod.enum(["pending", "downloading", "converting", "done", "error"]),
+  progress: zod.number().optional(),
+  filename: zod.string().optional(),
+  filesize: zod.number().optional(),
+  error: zod.string().optional(),
+  title: zod.string().optional(),
+  mode: zod.string().optional(),
+});
+
+/**
+ * @summary Get download job status
+ */
+export const GetDownloadStatusParams = zod.object({
+  jobId: zod.coerce.string(),
+});
+
+export const GetDownloadStatusResponse = zod.object({
+  jobId: zod.string(),
+  status: zod.enum(["pending", "downloading", "converting", "done", "error"]),
+  progress: zod.number().optional(),
+  filename: zod.string().optional(),
+  filesize: zod.number().optional(),
+  error: zod.string().optional(),
+  title: zod.string().optional(),
+  mode: zod.string().optional(),
+});
+
+/**
+ * @summary Download the completed file
+ */
+export const DownloadFileParams = zod.object({
+  jobId: zod.coerce.string(),
+});
+
+/**
+ * @summary Delete a download job and its file
+ */
+export const DeleteDownloadJobParams = zod.object({
+  jobId: zod.coerce.string(),
+});
+
+export const DeleteDownloadJobResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().optional(),
+});
