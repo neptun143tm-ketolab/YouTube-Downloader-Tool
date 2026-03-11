@@ -42,25 +42,39 @@ function scheduleDelete(job: DownloadJob) {
 }
 
 function sanitizeFilename(name: string): string {
-  return name.replace(/[^\w\s\-_.]/g, "").trim().replace(/\s+/g, "_");
+  return name
+    .replace(/[<>:"/\\|?*]/g, "")
+    .replace(/[\x00-\x1f]/g, "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .slice(0, 200);
+}
+
+/** Fetch the real title from yt-dlp before downloading */
+function fetchTitle(url: string): Promise<string> {
+  return new Promise((resolve) => {
+    const proc = spawn("yt-dlp", ["--print", "%(title)s", "--no-playlist", url]);
+    let out = "";
+    proc.stdout.on("data", (d: Buffer) => { out += d.toString(); });
+    proc.on("close", () => {
+      const title = out.trim().split("\n")[0]?.trim() ?? "";
+      resolve(title || "");
+    });
+    proc.on("error", () => resolve(""));
+    setTimeout(() => { proc.kill(); resolve(""); }, 10000);
+  });
 }
 
 router.post("/info", async (req, res) => {
   const { url } = req.body as { url: string };
-  if (!url || !url.includes("youtube.com") && !url.includes("youtu.be")) {
+  if (!url || (!url.includes("youtube.com") && !url.includes("youtu.be"))) {
     res.status(400).json({ error: "Invalid YouTube URL" });
     return;
   }
 
-  const ytdlp = spawn("yt-dlp", [
-    "--dump-json",
-    "--no-playlist",
-    url,
-  ]);
-
+  const ytdlp = spawn("yt-dlp", ["--dump-json", "--no-playlist", url]);
   let output = "";
   let errOutput = "";
-
   ytdlp.stdout.on("data", (data: Buffer) => { output += data.toString(); });
   ytdlp.stderr.on("data", (data: Buffer) => { errOutput += data.toString(); });
 
@@ -91,7 +105,7 @@ router.post("/start", async (req, res) => {
     audioQuality?: string;
   };
 
-  if (!url || !url.includes("youtube.com") && !url.includes("youtu.be")) {
+  if (!url || (!url.includes("youtube.com") && !url.includes("youtu.be"))) {
     res.status(400).json({ error: "Invalid YouTube URL" });
     return;
   }
@@ -104,11 +118,16 @@ router.post("/start", async (req, res) => {
     mode: mode ?? "audio",
   };
   jobs.set(jobId, job);
-
   res.json({ jobId, status: job.status, progress: 0, mode: job.mode });
 
+  // Step 1: Fetch the real title first
+  const rawTitle = await fetchTitle(url);
+  const safeTitle = sanitizeFilename(rawTitle) || jobId;
+  job.title = rawTitle || undefined;
+
   const ext = mode === "audio" ? "mp3" : "mp4";
-  const tmpBase = path.join(DOWNLOADS_DIR, `${jobId}`);
+  // Use jobId prefix to avoid filename collisions, title suffix for display
+  const outputTemplate = path.join(DOWNLOADS_DIR, `${jobId}_%(title)s.%(ext)s`);
 
   const ytdlpArgs: string[] = ["--no-playlist", "--newline"];
 
@@ -118,7 +137,7 @@ router.post("/start", async (req, res) => {
       "-x",
       "--audio-format", "mp3",
       "--audio-quality", abr,
-      "-o", `${tmpBase}.%(ext)s`,
+      "-o", outputTemplate,
       url
     );
   } else {
@@ -131,7 +150,7 @@ router.post("/start", async (req, res) => {
     ytdlpArgs.push(
       "-f", formatStr,
       "--merge-output-format", "mp4",
-      "-o", `${tmpBase}.%(ext)s`,
+      "-o", outputTemplate,
       url
     );
   }
@@ -139,26 +158,18 @@ router.post("/start", async (req, res) => {
   job.status = "downloading";
 
   const ytdlp = spawn("yt-dlp", ytdlpArgs);
-  let lastTitle = "";
 
   ytdlp.stdout.on("data", (data: Buffer) => {
     const text = data.toString();
-    const lines = text.split("\n");
-    for (const line of lines) {
+    for (const line of text.split("\n")) {
       const dlMatch = line.match(/\[download\]\s+([\d.]+)%/);
       if (dlMatch) {
         const pct = parseFloat(dlMatch[1]);
-        if (mode === "audio") {
-          job.progress = Math.min(pct * 0.7, 70);
-        } else {
-          job.progress = Math.min(pct, 80);
-        }
+        job.progress = Math.min(mode === "audio" ? pct * 0.7 : pct, 80);
       }
-      const titleMatch = line.match(/\[(?:download|youtube)\].*?"([^"]+)"/);
-      if (titleMatch) lastTitle = titleMatch[1];
       if (line.includes("[ExtractAudio]") || line.includes("[ffmpeg]") || line.includes("[Merger]")) {
         job.status = "converting";
-        job.progress = 80;
+        job.progress = 85;
       }
     }
   });
@@ -166,37 +177,29 @@ router.post("/start", async (req, res) => {
   ytdlp.on("close", (code) => {
     if (code !== 0) {
       job.status = "error";
-      job.error = "Download failed. The video may be unavailable or restricted.";
+      job.error = "다운로드에 실패했습니다. 비공개 영상이거나 지역 제한이 있을 수 있습니다.";
       return;
     }
 
-    const finalPath = `${tmpBase}.${ext}`;
-    if (fs.existsSync(finalPath)) {
-      const stats = fs.statSync(finalPath);
-      const rawName = lastTitle || jobId;
-      job.filename = `${sanitizeFilename(rawName)}.${ext}`;
-      job.filepath = finalPath;
+    // Find the output file - it starts with jobId
+    const files = fs.readdirSync(DOWNLOADS_DIR).filter(f => f.startsWith(jobId));
+    if (files.length > 0) {
+      const foundFile = files.find(f => f.endsWith(`.${ext}`)) ?? files[0];
+      const foundPath = path.join(DOWNLOADS_DIR, foundFile);
+      const stats = fs.statSync(foundPath);
+
+      // Build the user-facing filename from the real title
+      const displayFilename = `${safeTitle}.${ext}`;
+
+      job.filename = displayFilename;
+      job.filepath = foundPath;
       job.filesize = stats.size;
       job.status = "done";
       job.progress = 100;
-      job.title = lastTitle || undefined;
       scheduleDelete(job);
     } else {
-      const files = fs.readdirSync(DOWNLOADS_DIR).filter(f => f.startsWith(jobId));
-      if (files.length > 0) {
-        const found = path.join(DOWNLOADS_DIR, files[0]);
-        const stats = fs.statSync(found);
-        job.filename = `${sanitizeFilename(lastTitle || jobId)}.${ext}`;
-        job.filepath = found;
-        job.filesize = stats.size;
-        job.status = "done";
-        job.progress = 100;
-        job.title = lastTitle || undefined;
-        scheduleDelete(job);
-      } else {
-        job.status = "error";
-        job.error = "Output file not found after download.";
-      }
+      job.status = "error";
+      job.error = "출력 파일을 찾을 수 없습니다.";
     }
   });
 });
@@ -232,7 +235,12 @@ router.get("/file/:jobId", (req, res) => {
     return;
   }
   const filename = job.filename ?? path.basename(job.filepath);
-  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+  // RFC 5987 encoded filename for unicode support
+  const encodedFilename = encodeURIComponent(filename).replace(/'/g, "%27");
+  res.setHeader(
+    "Content-Disposition",
+    `attachment; filename*=UTF-8''${encodedFilename}`
+  );
   res.setHeader("Content-Type", job.mode === "audio" ? "audio/mpeg" : "video/mp4");
   const stream = fs.createReadStream(job.filepath);
   stream.pipe(res as unknown as NodeJS.WritableStream);
