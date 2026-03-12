@@ -189,8 +189,8 @@ router.post("/start", async (req, res) => {
       const stats = fs.statSync(foundPath);
 
       // Build the user-facing filename from the real title
-      const displayFilename = `${safeTitle}.${ext}`;
-
+      //const displayFilename = `${safeTitle}.${ext}`;
+      const displayFilename = safeTitle ? `${safeTitle}.${ext}` : foundFile;
       job.filename = displayFilename;
       job.filepath = foundPath;
       job.filesize = stats.size;
