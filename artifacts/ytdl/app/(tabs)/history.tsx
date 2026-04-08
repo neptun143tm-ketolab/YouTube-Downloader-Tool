@@ -52,12 +52,18 @@ function HistoryItem({
   };
 
   const handleDelete = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  if (Platform.OS === "web") {
+    if (window.confirm("이 항목을 기록에서 삭제할까요?")) {
+      onDelete();
+    }
+  } else {
     Alert.alert("삭제", "이 항목을 기록에서 삭제할까요?", [
       { text: "취소", style: "cancel" },
       { text: "삭제", style: "destructive", onPress: onDelete },
     ]);
-  };
+  }
+};
 
   return (
     <View style={styles.item}>
@@ -104,13 +110,19 @@ export default function HistoryScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const botPad = Platform.OS === "web" ? 34 : insets.bottom;
 
-  const handleClearAll = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+ const handleClearAll = () => {
+  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  if (Platform.OS === "web") {
+    if (window.confirm("다운로드 기록을 모두 삭제할까요?")) {
+      clearHistory();
+    }
+  } else {
     Alert.alert("전체 삭제", "다운로드 기록을 모두 삭제할까요?", [
       { text: "취소", style: "cancel" },
       { text: "삭제", style: "destructive", onPress: clearHistory },
     ]);
-  };
+  }
+};
 
   return (
     <View style={[styles.container, { paddingTop: topPad }]}>
